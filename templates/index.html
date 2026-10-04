@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MedQuery — Educational Healthcare Question and Symptom Guidance Assistant. Real-time NLP intent classification, symptom extraction, conservative urgency triage, tone analysis, and voice interaction.">
+  <title>MedQuery — Healthcare Question & Symptom Guidance Assistant</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Ambient Animated Clinical Background Grid & Glows -->
+  <div class="ambient-glow glow-top-left" aria-hidden="true"></div>
+  <div class="ambient-glow glow-bottom-right" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <!-- Print Summary Header (Only rendered when window.print() is executed) -->
+  <header class="print-only-header">
+    <div class="print-title-row">
+      <div>
+        <h1 class="print-app-title">MedQuery • Clinical Conversation Summary</h1>
+        <p class="print-app-tagline">Describe. Understand. Get Guidance. (Educational Healthcare NLP Assistant)</p>
+      </div>
+      <div class="print-meta-right">
+        <p><strong>Generated:</strong> <span id="printDate"></span></p>
+        <p><strong>Session ID:</strong> <span id="printSessionId"></span></p>
+      </div>
+    </div>
+    <div class="print-metrics-row" id="printMetricsSummary"></div>
+    <div class="print-disclaimer-box">
+      <strong>Educational Notice:</strong> MedQuery provides general educational information and is not a substitute for professional medical advice, diagnosis, or treatment. In acute emergencies, contact local emergency services (e.g. 911 / 112) immediately.
+    </div>
+    <hr class="print-divider">
+  </header>
+
+  <!-- App Header -->
+  <header class="app-header no-print">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="brand-icon-wrapper" title="MedQuery Clinical Assistant">
+          <!-- Animated ECG Heartbeat Pulse Icon -->
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path class="ecg-path" d="M2 12h3.5l2.5-7 4 14 3.5-10 2 5H22"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-row">
+            <span class="brand-title">MedQuery</span>
+            <div class="system-status-pill" title="NLP Pipeline Ready">
+              <span class="status-dot"></span>
+              <span id="connectionStatusText">Live Healthcare NLP</span>
+            </div>
+            <!-- Audio Feedback Toggle Button -->
+            <button id="btnAudioToggle" class="btn-icon-toggle" title="Toggle UI sound effects" aria-label="Toggle UI Audio">
+              <svg id="iconAudioOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mini-icon">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              </svg>
+              <svg id="iconAudioOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mini-icon hidden">
+                <line x1="1" y1="1" x2="23" y2="23"/>
+                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+          </div>
+          <span class="brand-tagline">Describe. Understand. Get Guidance.</span>
+        </div>
+      </div>
+
+      <!-- Action Toolbar -->
+      <div class="header-actions">
+        <button id="btnDemo" class="btn btn-secondary action-btn-hover" title="Restore sample clinical conversations with multi-turn analytics">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>Sample Demo</span>
+        </button>
+
+        <button id="btnPrint" class="btn btn-secondary action-btn-hover" title="Print a professional A4-formatted clinical summary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          <span>Print Summary</span>
+        </button>
+
+        <button id="btnClear" class="btn btn-outline-danger action-btn-hover" title="Clear conversation history and reset runtime state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+          <span>Clear History</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Safety Disclaimer Ribbon -->
+    <div class="safety-ribbon">
+      <div class="safety-ribbon-content">
+        <div class="safety-badge">
+          <svg class="safety-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>Clinical Safety Notice</span>
+        </div>
+        <span class="safety-text">
+          MedQuery provides general educational guidance and is not a substitute for professional medical advice, diagnosis, or treatment. In acute emergencies, contact local emergency services (e.g. 911 / 112) immediately.
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout Container -->
+  <main class="main-layout no-print">
+    <!-- Left Column: Conversation Hub -->
+    <section class="conversation-panel" aria-label="Healthcare Conversation Stream">
+      <div class="panel-header">
+        <div class="panel-header-title">
+          <div class="icon-bubble">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="panel-header-icon">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+          </div>
+          <div>
+            <h2>Clinical Conversation Stream</h2>
+            <span class="panel-subcaption">Natural-language symptom & health inquiry</span>
+          </div>
+        </div>
+        <div class="panel-meta-actions">
+          <span class="message-counter-badge" id="messageCounterBadge">0 Messages</span>
+        </div>
+      </div>
+
+      <!-- Messages Stream -->
+      <div class="messages-stream" id="messagesStream" tabindex="0" aria-live="polite">
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-state-visual">
+            <div class="pulse-ring"></div>
+            <div class="empty-state-icon-card">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+            </div>
+          </div>
+          <h3>Welcome to MedQuery Assistant</h3>
+          <p class="empty-state-desc">
+            Describe symptoms you are experiencing, ask about nutrition, sleep hygiene, or medication principles.
+            Our educational NLP engine parses health intents, extracts clinical terms, assigns conservative triage urgency, and analyzes emotional tone in real time.
+          </p>
+          <div class="empty-state-grid">
+            <div class="empty-feature-card">
+              <div class="feature-icon-circle blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              </div>
+              <div class="feature-text">
+                <strong>Rule-Based Intent NLP</strong>
+                <span>Classifies 10 healthcare domains with confidence scoring.</span>
+              </div>
+            </div>
+            <div class="empty-feature-card">
+              <div class="feature-icon-circle green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div class="feature-text">
+                <strong>Conservative Triage</strong>
+                <span>Urgent, Needs Attention, and Routine triage categorization.</span>
+              </div>
+            </div>
+            <div class="empty-feature-card">
+              <div class="feature-icon-circle purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/></svg>
+              </div>
+              <div class="feature-text">
+                <strong>Dynamic Analytics</strong>
+                <span>Zero hardcoded data; aggregates session state live.</span>
+              </div>
+            </div>
+            <div class="empty-feature-card">
+              <div class="feature-icon-circle teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </div>
+              <div class="feature-text">
+                <strong>Voice Dictation & Read-Aloud</strong>
+                <span>Integrated Speech-to-Text & Text-to-Speech interaction.</span>
+              </div>
+            </div>
+          </div>
+          <p class="empty-prompt-callout">
+            👇 Select a suggested question below or type your inquiry to begin:
+          </p>
+        </div>
+      </div>
+
+      <!-- Suggested Prompts Bar with Category Filter Pills -->
+      <div class="suggested-prompts-bar">
+        <div class="suggested-bar-header">
+          <span class="suggested-label">Interactive Suggested Prompts:</span>
+          <span class="suggested-hint">Click any prompt to populate the input box</span>
+        </div>
+        <div class="suggested-chips-container">
+          <button class="suggested-chip chip-symptom" data-query="I have had a throbbing headache and felt exhausted for the past two days.">
+            <span class="chip-icon">🤕</span>
+            <span class="chip-text">Headache & Fatigue</span>
+            <span class="chip-tag">Symptom</span>
+          </button>
+          <button class="suggested-chip chip-sleep" data-query="How can I improve my sleep hygiene to get more restorative deep sleep?">
+            <span class="chip-icon">🌙</span>
+            <span class="chip-text">Deep Sleep Hygiene</span>
+            <span class="chip-tag">Sleep</span>
+          </button>
+          <button class="suggested-chip chip-nutrition" data-query="What are healthy high-protein snacks to balance daily nutrition and hydration?">
+            <span class="chip-icon">🥗</span>
+            <span class="chip-text">Balanced Nutrition & Protein</span>
+            <span class="chip-tag">Nutrition</span>
+          </button>
+          <button class="suggested-chip chip-general" data-query="I am experiencing mild lower back stiffness after prolonged sitting at work.">
+            <span class="chip-icon">🧘</span>
+            <span class="chip-text">Back Stiffness & Posture</span>
+            <span class="chip-tag">Exercise</span>
+          </button>
+          <button class="suggested-chip chip-urgent red-flag" data-query="I feel sudden severe crushing chest pain and shortness of breath!">
+            <span class="chip-icon">🚨</span>
+            <span class="chip-text">Crushing Chest Pain</span>
+            <span class="chip-tag red">Emergency Red Flag</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Input Bar with Speech Dictation -->
+      <div class="chat-input-wrapper">
+        <form id="chatForm" class="chat-input-form" onsubmit="return false;">
+          <div class="input-container" id="inputContainer">
+            <textarea
+              id="messageInput"
+              class="message-textarea"
+              placeholder="Describe your symptoms, lifestyle habits, or ask a health question in natural language..."
+              rows="2"
+              maxlength="2000"
+              aria-label="Health inquiry message input"
+            ></textarea>
+            <div class="input-footer">
+              <div class="input-tools-left">
+                <!-- Voice Input Microphone Button (Web Speech API) -->
+                <button type="button" id="btnVoiceInput" class="btn-tool" title="Dictate symptoms via Voice Input (Microphone)" aria-label="Speech Dictation">
+                  <svg id="micIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tool-icon">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </svg>
+                  <span id="micStatusText" class="tool-label">Voice Dictate</span>
+                </button>
+                <span class="char-counter" id="charCounter">0 / 2000</span>
+              </div>
+
+              <div class="input-tools-right">
+                <span class="keyboard-hint">Press <kbd>Enter ↵</kbd> to send • <kbd>Shift + Enter</kbd> for newline</span>
+                <button type="submit" id="btnSend" class="btn btn-primary btn-send-interactive" aria-label="Send message">
+                  <span id="btnSendText">Analyze & Send</span>
+                  <svg id="btnSendIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-icon">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                  <span id="sendSpinner" class="spinner hidden" aria-hidden="true"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Right Column: Real-Time Analytics & NLP Inspector -->
+    <aside class="analytics-panel" aria-label="Healthcare Analytics and NLP Breakdown">
+      <div class="panel-header">
+        <div class="panel-header-title">
+          <div class="icon-bubble cyan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="panel-header-icon">
+              <path d="M18 20V10M12 20V4M6 20v-6"/>
+            </svg>
+          </div>
+          <div>
+            <h2>Clinical Analytics</h2>
+            <span class="panel-subcaption">Real-time session NLP metrics</span>
+          </div>
+        </div>
+        <span class="live-pulse-badge">
+          <span class="pulse-beacon"></span>
+          Live State
+        </span>
+      </div>
+
+      <div class="analytics-scroll-body">
+        <!-- Card 1: Latest Message Analysis -->
+        <div class="card analytics-card highlight-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="card-title-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <h3>Current Inquiry Analysis</h3>
+            </div>
+            <span class="card-subtitle" id="latestTimestamp">Awaiting inquiry</span>
+          </div>
+          <div class="analysis-grid">
+            <div class="metric-cell">
+              <span class="metric-sublabel">Primary Intent</span>
+              <div class="metric-value-row">
+                <span class="metric-highlight" id="latestIntent">None yet</span>
+                <span class="confidence-pill" id="latestConfidence">—</span>
+              </div>
+            </div>
+
+            <div class="metric-cell">
+              <span class="metric-sublabel">Triage Urgency</span>
+              <div class="metric-value-row">
+                <span class="urgency-tag routine" id="latestUrgency">
+                  <span class="tag-dot"></span>
+                  <span id="latestUrgencyText">Routine</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="metric-cell">
+              <span class="metric-sublabel">Emotional Tone</span>
+              <div class="metric-value-row">
+                <span class="tone-tag neutral" id="latestTone">Neutral</span>
+              </div>
+            </div>
+
+            <div class="metric-cell">
+              <span class="metric-sublabel">Total Terms</span>
+              <div class="metric-value-row">
+                <span class="metric-highlight" id="latestTermsCount">0 terms</span>
+              </div>
+            </div>
+
+            <div class="metric-cell full-width">
+              <span class="metric-sublabel">Extracted Health Terms</span>
+              <div class="keywords-chip-list" id="latestKeywordsList">
+                <span class="empty-terms-notice">No medical terms detected yet</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Overview Counters -->
+        <div class="card analytics-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="card-title-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <h3>Session Overview</h3>
+            </div>
+            <span class="card-subtitle">Active Centralized State</span>
+          </div>
+          <div class="stats-counters-grid">
+            <div class="stat-counter-box" title="Total messages exchanged in this session">
+              <span class="stat-num" id="statTotalMessages">0</span>
+              <span class="stat-title">Total Exchanges</span>
+            </div>
+            <div class="stat-counter-box" title="User inquiries analyzed">
+              <span class="stat-num" id="statUserMessages">0</span>
+              <span class="stat-title">User Inquiries</span>
+            </div>
+            <div class="stat-counter-box" title="Guidance responses provided">
+              <span class="stat-num" id="statAssistantMessages">0</span>
+              <span class="stat-title">Responses</span>
+            </div>
+            <div class="stat-counter-box" title="Total healthcare keywords extracted">
+              <span class="stat-num" id="statKeywordMentions">0</span>
+              <span class="stat-title">Terms Extracted</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Intent Distribution -->
+        <div class="card analytics-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="card-title-icon"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+              <h3>Intent Distribution</h3>
+            </div>
+            <span class="card-subtitle" id="mostCommonIntentLabel">Most common: —</span>
+          </div>
+          <div class="distribution-bars-list" id="intentDistributionList">
+            <p class="empty-distribution-notice">Send inquiries to generate real-time intent analytics.</p>
+          </div>
+        </div>
+
+        <!-- Card 4: Urgency Triage Breakdown -->
+        <div class="card analytics-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="card-title-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <h3>Urgency Triage Breakdown</h3>
+            </div>
+            <span class="card-subtitle">Conservative classification</span>
+          </div>
+          <div class="urgency-meters">
+            <div class="urgency-meter-row">
+              <div class="meter-info">
+                <span class="meter-name"><span class="dot-urgency routine"></span> Routine Self-Care</span>
+                <span class="meter-val" id="urgencyRoutineCount">0 (0%)</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill routine" id="urgencyRoutineBar" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <div class="urgency-meter-row">
+              <div class="meter-info">
+                <span class="meter-name"><span class="dot-urgency attention"></span> Needs Attention</span>
+                <span class="meter-val" id="urgencyAttentionCount">0 (0%)</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill attention" id="urgencyAttentionBar" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <div class="urgency-meter-row">
+              <div class="meter-info">
+                <span class="meter-name"><span class="dot-urgency urgent"></span> Urgent Medical Review</span>
+                <span class="meter-val" id="urgencyUrgentCount">0 (0%)</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill urgent" id="urgencyUrgentBar" style="width: 0%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 5: Tone & Sentiment Distribution -->
+        <div class="card analytics-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="card-title-icon"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+              <h3>Emotional Tone Breakdown</h3>
+            </div>
+            <span class="card-subtitle">Affective sentiment markers</span>
+          </div>
+          <div class="distribution-bars-list" id="toneDistributionList">
+            <p class="empty-distribution-notice">Send inquiries to analyze emotional tone.</p>
+          </div>
+        </div>
+
+        <!-- Card 6: Top Extracted Keywords Cloud -->
+        <div class="card analytics-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="card-title-icon"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              <h3>Frequent Health Keywords</h3>
+            </div>
+            <span class="card-subtitle" id="uniqueKeywordsLabel">0 unique terms</span>
+          </div>
+          <div class="keyword-frequency-cloud" id="topKeywordsCloud">
+            <p class="empty-distribution-notice">Extracted health terms will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Print-Only Conversation Summary (Rendered on window.print()) -->
+  <section class="print-conversation-section" id="printConversationSection"></section>
+
+  <!-- Detailed NLP Analysis Inspector Modal -->
+  <div class="modal-backdrop hidden" id="analysisModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-bubble">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-icon">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </div>
+          <div>
+            <h3 id="modalTitle">Clinical NLP Pipeline Inspection</h3>
+            <span class="modal-subtitle" id="modalSubtitle">Detailed diagnostic breakdown</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="modalCloseBtn" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body" id="modalBody"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary action-btn-hover" id="modalDismissBtn">Close Inspector</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clear Confirmation Dialog Modal -->
+  <div class="modal-backdrop hidden" id="confirmModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header danger-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-bubble danger">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-icon text-danger">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div>
+            <h3 id="confirmTitle">Reset Conversation History?</h3>
+            <span class="modal-subtitle">Destructive session action</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="confirmCloseBtn" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p>This will erase all active messages and reset the dynamic analytics counters to zero.</p>
+        <div class="alert-box-subtle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>You can restore realistic clinical data at any time by clicking <strong>"Sample Demo"</strong> in the top toolbar.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary action-btn-hover" id="confirmCancelBtn">Cancel</button>
+        <button class="btn btn-danger action-btn-hover" id="confirmExecuteBtn">Reset All Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="assertive"></div>
+
+  <!-- JavaScript Entry Point -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
