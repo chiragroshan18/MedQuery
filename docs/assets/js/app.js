@@ -21,14 +21,21 @@
   const btnSendIcon = document.getElementById('btnSendIcon');
   const sendSpinner = document.getElementById('sendSpinner');
   const messageCounterBadge = document.getElementById('messageCounterBadge');
+  const btnScrollBottom = document.getElementById('btnScrollBottom');
+  const btnClearInput = document.getElementById('btnClearInput');
 
-  // Header Actions & Audio
+  // Header Actions, Audio & Themes
   const btnDemo = document.getElementById('btnDemo');
   const btnPrint = document.getElementById('btnPrint');
   const btnClear = document.getElementById('btnClear');
   const btnAudioToggle = document.getElementById('btnAudioToggle');
   const iconAudioOn = document.getElementById('iconAudioOn');
   const iconAudioOff = document.getElementById('iconAudioOff');
+
+  const btnThemeToggle = document.getElementById('btnThemeToggle');
+  const iconSun = document.getElementById('iconSun');
+  const iconMoon = document.getElementById('iconMoon');
+  const themeLabelText = document.getElementById('themeLabelText');
 
   // Voice Input Elements
   const btnVoiceInput = document.getElementById('btnVoiceInput');
@@ -45,6 +52,15 @@
   const latestTermsCount = document.getElementById('latestTermsCount');
   const latestKeywordsList = document.getElementById('latestKeywordsList');
 
+  // Pictorial Representation: Donut Chart Elements
+  const donutSegmentRoutine = document.getElementById('donutSegmentRoutine');
+  const donutSegmentAttention = document.getElementById('donutSegmentAttention');
+  const donutSegmentUrgent = document.getElementById('donutSegmentUrgent');
+  const donutCenterNum = document.getElementById('donutCenterNum');
+  const legendRoutineStat = document.getElementById('legendRoutineStat');
+  const legendAttentionStat = document.getElementById('legendAttentionStat');
+  const legendUrgentStat = document.getElementById('legendUrgentStat');
+
   const statTotalMessages = document.getElementById('statTotalMessages');
   const statUserMessages = document.getElementById('statUserMessages');
   const statAssistantMessages = document.getElementById('statAssistantMessages');
@@ -52,14 +68,6 @@
 
   const mostCommonIntentLabel = document.getElementById('mostCommonIntentLabel');
   const intentDistributionList = document.getElementById('intentDistributionList');
-
-  const urgencyRoutineCount = document.getElementById('urgencyRoutineCount');
-  const urgencyRoutineBar = document.getElementById('urgencyRoutineBar');
-  const urgencyAttentionCount = document.getElementById('urgencyAttentionCount');
-  const urgencyAttentionBar = document.getElementById('urgencyAttentionBar');
-  const urgencyUrgentCount = document.getElementById('urgencyUrgentCount');
-  const urgencyUrgentBar = document.getElementById('urgencyUrgentBar');
-
   const toneDistributionList = document.getElementById('toneDistributionList');
   const topKeywordsCloud = document.getElementById('topKeywordsCloud');
   const uniqueKeywordsLabel = document.getElementById('uniqueKeywordsLabel');
@@ -149,12 +157,48 @@
   // ==========================================================================
 
   document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     bindEvents();
     initSpeechRecognition();
     syncUI();
   });
 
+  function initTheme() {
+    const savedTheme = localStorage.getItem('medquery_theme') || 'light';
+    applyTheme(savedTheme);
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('medquery_theme', theme);
+
+    if (btnThemeToggle && iconSun && iconMoon && themeLabelText) {
+      if (theme === 'dark') {
+        iconSun.classList.remove('hidden');
+        iconMoon.classList.add('hidden');
+        themeLabelText.textContent = 'Light Mode';
+      } else {
+        iconSun.classList.add('hidden');
+        iconMoon.classList.remove('hidden');
+        themeLabelText.textContent = 'Dark Mode';
+      }
+    }
+  }
+
+  function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(newTheme);
+    playSound('click');
+    showToast(`Switched to ${newTheme === 'dark' ? 'Dark' : 'Light'} Mode`, 'info');
+  }
+
   function bindEvents() {
+    // Theme toggle
+    if (btnThemeToggle) {
+      btnThemeToggle.addEventListener('click', toggleTheme);
+    }
+
     chatForm.addEventListener('submit', (e) => {
       e.preventDefault();
       handleSend();
@@ -170,7 +214,23 @@
     messageInput.addEventListener('input', () => {
       const len = messageInput.value.length;
       charCounter.textContent = `${len} / 2000`;
+      if (btnClearInput) {
+        if (len > 0) {
+          btnClearInput.classList.remove('hidden');
+        } else {
+          btnClearInput.classList.add('hidden');
+        }
+      }
     });
+
+    if (btnClearInput) {
+      btnClearInput.addEventListener('click', () => {
+        messageInput.value = '';
+        messageInput.dispatchEvent(new Event('input'));
+        messageInput.focus();
+        playSound('click');
+      });
+    }
 
     btnAudioToggle.addEventListener('click', () => {
       audioEnabled = !audioEnabled;
@@ -188,6 +248,24 @@
 
     btnVoiceInput.addEventListener('click', toggleVoiceDictation);
 
+    // Scroll stream detection for floating scroll button
+    messagesStream.addEventListener('scroll', () => {
+      if (!btnScrollBottom) return;
+      const distanceToBottom = messagesStream.scrollHeight - messagesStream.scrollTop - messagesStream.clientHeight;
+      if (distanceToBottom > 160) {
+        btnScrollBottom.classList.remove('hidden');
+      } else {
+        btnScrollBottom.classList.add('hidden');
+      }
+    });
+
+    if (btnScrollBottom) {
+      btnScrollBottom.addEventListener('click', () => {
+        playSound('click');
+        scrollToBottom();
+      });
+    }
+
     const chips = document.querySelectorAll('.suggested-chip');
     chips.forEach(chip => {
       chip.addEventListener('click', () => {
@@ -195,8 +273,9 @@
         const query = chip.getAttribute('data-query');
         if (query) {
           messageInput.value = query;
-          charCounter.textContent = `${query.length} / 2000`;
+          messageInput.dispatchEvent(new Event('input'));
           messageInput.focus();
+          showToast('Suggested query loaded into console', 'info');
         }
       });
     });
@@ -593,22 +672,49 @@
 
     renderIntentDistribution(dash.intent_distribution);
 
-    const urgDist = dash.urgency_distribution || {};
-    const routine = urgDist['Routine'] || { count: 0, percentage: 0 };
-    const attention = urgDist['Needs Attention'] || { count: 0, percentage: 0 };
-    const urgent = urgDist['Urgent'] || { count: 0, percentage: 0 };
-
-    urgencyRoutineCount.textContent = `${routine.count} (${routine.percentage}%)`;
-    urgencyRoutineBar.style.width = `${routine.percentage}%`;
-
-    urgencyAttentionCount.textContent = `${attention.count} (${attention.percentage}%)`;
-    urgencyAttentionBar.style.width = `${attention.percentage}%`;
-
-    urgencyUrgentCount.textContent = `${urgent.count} (${urgent.percentage}%)`;
-    urgencyUrgentBar.style.width = `${urgent.percentage}%`;
+    // Render Pictorial Donut Chart
+    renderUrgencyDonutChart(dash.urgency_distribution, dash.user_messages || 0);
 
     renderToneDistribution(dash.tone_distribution);
     renderKeywordCloud(dash.top_keywords, dash.total_unique_keywords);
+  }
+
+  // ==========================================================================
+  // Pictorial Representation: SVG Donut Chart Renderer
+  // ==========================================================================
+
+  function renderUrgencyDonutChart(urgDist, userCount) {
+    if (!donutSegmentRoutine || !donutSegmentAttention || !donutSegmentUrgent) return;
+
+    if (donutCenterNum) {
+      donutCenterNum.textContent = userCount;
+    }
+
+    const routine = (urgDist && urgDist['Routine']) ? urgDist['Routine'] : { count: 0, percentage: 0 };
+    const attention = (urgDist && urgDist['Needs Attention']) ? urgDist['Needs Attention'] : { count: 0, percentage: 0 };
+    const urgent = (urgDist && urgDist['Urgent']) ? urgDist['Urgent'] : { count: 0, percentage: 0 };
+
+    if (legendRoutineStat) legendRoutineStat.textContent = `${routine.count} (${routine.percentage}%)`;
+    if (legendAttentionStat) legendAttentionStat.textContent = `${attention.count} (${attention.percentage}%)`;
+    if (legendUrgentStat) legendUrgentStat.textContent = `${urgent.count} (${urgent.percentage}%)`;
+
+    // Radius = 48 -> Circumference = 2 * PI * 48 ≈ 301.59
+    const circumference = 301.59;
+    const routineLen = (routine.percentage / 100) * circumference;
+    const attentionLen = (attention.percentage / 100) * circumference;
+    const urgentLen = (urgent.percentage / 100) * circumference;
+
+    // Routine segment starts at offset 0
+    donutSegmentRoutine.style.strokeDasharray = `${routineLen} ${circumference}`;
+    donutSegmentRoutine.style.strokeDashoffset = '0';
+
+    // Attention segment starts after routine segment
+    donutSegmentAttention.style.strokeDasharray = `${attentionLen} ${circumference}`;
+    donutSegmentAttention.style.strokeDashoffset = `-${routineLen}`;
+
+    // Urgent segment starts after routine + attention segments
+    donutSegmentUrgent.style.strokeDasharray = `${urgentLen} ${circumference}`;
+    donutSegmentUrgent.style.strokeDashoffset = `-${routineLen + attentionLen}`;
   }
 
   function renderIntentDistribution(dist) {

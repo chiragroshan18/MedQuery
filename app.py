@@ -25,6 +25,14 @@ SAMPLE_DEMO_QUERIES = [
     "I'm feeling sudden severe chest pressure and shortness of breath!"
 ]
 
+def seed_initial_state():
+    """Populates initial runtime session with realistic verified interactions."""
+    for query in SAMPLE_DEMO_QUERIES:
+        pipeline.process_and_record(query, state_manager)
+
+# Automatically seed so the application is immediately lively and populated
+seed_initial_state()
+
 
 @app.route("/")
 def index():

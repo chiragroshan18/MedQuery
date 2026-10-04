@@ -826,6 +826,8 @@
       this.toneAnalyzer = new ToneAnalyzer();
       this.responseEngine = new ResponseEngine();
       this.stateManager = new StateManager();
+      // Seed initial state with realistic multi-turn clinical interactions
+      this.restoreDemo();
     }
 
     analyze(text) {

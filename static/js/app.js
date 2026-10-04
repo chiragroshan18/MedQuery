@@ -1,7 +1,7 @@
 /**
  * MedQuery — Healthcare Conversational Assistant
- * Frontend Controller with Fetch REST API, Web Audio UI Feedback,
- * Web Speech Voice Dictation & Text-to-Speech Synthesis.
+ * Frontend Controller: Dark/Light Mode, SVG Donut Chart, Dynamic Scroll Options,
+ * Fetch REST API, Web Audio UI Feedback, Web Speech Voice Dictation & TTS.
  */
 
 (function () {
@@ -18,8 +18,10 @@
   const btnSendIcon = document.getElementById('btnSendIcon');
   const sendSpinner = document.getElementById('sendSpinner');
   const messageCounterBadge = document.getElementById('messageCounterBadge');
+  const btnScrollBottom = document.getElementById('btnScrollBottom');
+  const btnClearInput = document.getElementById('btnClearInput');
 
-  // Header Actions & Audio
+  // Header Actions, Audio & Themes
   const btnDemo = document.getElementById('btnDemo');
   const btnPrint = document.getElementById('btnPrint');
   const btnClear = document.getElementById('btnClear');
@@ -27,9 +29,13 @@
   const iconAudioOn = document.getElementById('iconAudioOn');
   const iconAudioOff = document.getElementById('iconAudioOff');
 
-  // Voice Input Elements
+  const btnThemeToggle = document.getElementById('btnThemeToggle');
+  const iconSun = document.getElementById('iconSun');
+  const iconMoon = document.getElementById('iconMoon');
+  const themeLabelText = document.getElementById('themeLabelText');
+
+  // Voice Assistant Elements
   const btnVoiceInput = document.getElementById('btnVoiceInput');
-  const micIcon = document.getElementById('micIcon');
   const micStatusText = document.getElementById('micStatusText');
 
   // Analytics Elements
@@ -42,21 +48,24 @@
   const latestTermsCount = document.getElementById('latestTermsCount');
   const latestKeywordsList = document.getElementById('latestKeywordsList');
 
+  // Pictorial Representation: Donut Chart Elements
+  const donutSegmentRoutine = document.getElementById('donutSegmentRoutine');
+  const donutSegmentAttention = document.getElementById('donutSegmentAttention');
+  const donutSegmentUrgent = document.getElementById('donutSegmentUrgent');
+  const donutCenterNum = document.getElementById('donutCenterNum');
+  const legendRoutineStat = document.getElementById('legendRoutineStat');
+  const legendAttentionStat = document.getElementById('legendAttentionStat');
+  const legendUrgentStat = document.getElementById('legendUrgentStat');
+
+  // Session Overview Counters
   const statTotalMessages = document.getElementById('statTotalMessages');
   const statUserMessages = document.getElementById('statUserMessages');
   const statAssistantMessages = document.getElementById('statAssistantMessages');
   const statKeywordMentions = document.getElementById('statKeywordMentions');
 
+  // Intent & Tone Distributions
   const mostCommonIntentLabel = document.getElementById('mostCommonIntentLabel');
   const intentDistributionList = document.getElementById('intentDistributionList');
-
-  const urgencyRoutineCount = document.getElementById('urgencyRoutineCount');
-  const urgencyRoutineBar = document.getElementById('urgencyRoutineBar');
-  const urgencyAttentionCount = document.getElementById('urgencyAttentionCount');
-  const urgencyAttentionBar = document.getElementById('urgencyAttentionBar');
-  const urgencyUrgentCount = document.getElementById('urgencyUrgentCount');
-  const urgencyUrgentBar = document.getElementById('urgencyUrgentBar');
-
   const toneDistributionList = document.getElementById('toneDistributionList');
   const topKeywordsCloud = document.getElementById('topKeywordsCloud');
   const uniqueKeywordsLabel = document.getElementById('uniqueKeywordsLabel');
@@ -89,7 +98,7 @@
   let isRecognizing = false;
   let currentSpeakingUtterance = null;
 
-  // Web Audio Context Synthesizer (Zero External Dependencies)
+  // Web Audio Context Synthesizer
   let audioCtx = null;
   function getAudioContext() {
     if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
@@ -121,20 +130,20 @@
         osc.stop(now + 0.04);
       } else if (type === 'receive') {
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.07); // E5
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
         gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.start(now);
-        osc.stop(now + 0.18);
+        osc.stop(now + 0.2);
       } else if (type === 'urgent') {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(440, now);
-        osc.frequency.setValueAtTime(880, now + 0.1);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.frequency.setValueAtTime(880, now + 0.12);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
         osc.start(now);
-        osc.stop(now + 0.25);
+        osc.stop(now + 0.28);
       }
     } catch (e) {
       // Audio autoplay policy fallback
@@ -142,16 +151,48 @@
   }
 
   // ==========================================================================
-  // Initialization & Event Binding
+  // Initialization & Theme Setup
   // ==========================================================================
 
   document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     bindEvents();
     initSpeechRecognition();
     fetchConversationAndDashboard();
   });
 
+  function initTheme() {
+    const savedTheme = localStorage.getItem('medquery_theme') || 'light';
+    applyTheme(savedTheme);
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('medquery_theme', theme);
+
+    if (theme === 'dark') {
+      iconSun.classList.remove('hidden');
+      iconMoon.classList.add('hidden');
+      themeLabelText.textContent = 'Light Mode';
+    } else {
+      iconSun.classList.add('hidden');
+      iconMoon.classList.remove('hidden');
+      themeLabelText.textContent = 'Dark Mode';
+    }
+  }
+
+  function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(newTheme);
+    playSound('click');
+    showToast(`Switched to ${newTheme === 'dark' ? 'Dark' : 'Light'} Mode`, 'info');
+  }
+
   function bindEvents() {
+    // Theme Toggle
+    btnThemeToggle.addEventListener('click', toggleTheme);
+
     // Chat Form Submit
     chatForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -166,11 +207,27 @@
       }
     });
 
-    // Char counter
+    // Char counter & Clear button toggle
     messageInput.addEventListener('input', () => {
       const len = messageInput.value.length;
       charCounter.textContent = `${len} / 2000`;
+      if (btnClearInput) {
+        if (len > 0) {
+          btnClearInput.classList.remove('hidden');
+        } else {
+          btnClearInput.classList.add('hidden');
+        }
+      }
     });
+
+    if (btnClearInput) {
+      btnClearInput.addEventListener('click', () => {
+        messageInput.value = '';
+        messageInput.dispatchEvent(new Event('input'));
+        messageInput.focus();
+        playSound('click');
+      });
+    }
 
     // Audio Mute Toggle
     btnAudioToggle.addEventListener('click', () => {
@@ -189,6 +246,22 @@
 
     // Voice Dictation
     btnVoiceInput.addEventListener('click', toggleVoiceDictation);
+
+    // Scroll stream detection for floating scroll button
+    messagesStream.addEventListener('scroll', () => {
+      const distanceToBottom = messagesStream.scrollHeight - messagesStream.scrollTop - messagesStream.clientHeight;
+      if (distanceToBottom > 160) {
+        btnScrollBottom.classList.remove('hidden');
+      } else {
+        btnScrollBottom.classList.add('hidden');
+      }
+    });
+
+    // Jump to bottom button click
+    btnScrollBottom.addEventListener('click', () => {
+      playSound('click');
+      scrollToBottom();
+    });
 
     // Suggested Chips
     const chips = document.querySelectorAll('.suggested-chip');
@@ -279,7 +352,7 @@
         stopVoiceDictation();
       };
     } else {
-      btnVoiceInput.title = 'Voice dictation is supported in Chrome, Edge, and Safari';
+      btnVoiceInput.title = 'Voice dictation is supported in modern browsers';
     }
   }
 
@@ -560,21 +633,21 @@
             </div>
             <div class="assistant-actions-group">
               <button class="btn-card-action btn-speech" title="Read guidance aloud via Speech Synthesis">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
                   <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
                 </svg>
                 <span>Read</span>
               </button>
               <button class="btn-card-action btn-copy" title="Copy response to clipboard">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>
                 <span>Copy</span>
               </button>
               <button class="btn-card-action btn-inspect" data-msg-id="${msg.id}" title="Inspect full NLP pipeline details">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
                 <span>Inspect NLP</span>
@@ -584,7 +657,6 @@
         </div>
       `;
 
-      // Event handlers for card action buttons
       const btnInspect = bubble.querySelector('.btn-inspect');
       if (btnInspect) {
         btnInspect.addEventListener('click', () => {
@@ -655,23 +727,11 @@
     // Most common intent
     mostCommonIntentLabel.textContent = `Most common: ${formatIntentName(dash.most_common_intent || '—')}`;
 
-    // Intent distribution
+    // Render Pictorial Donut Chart
+    renderUrgencyDonutChart(dash.urgency_distribution, dash.user_messages || 0);
+
+    // Render Pictorial Bar Graph
     renderIntentDistribution(dash.intent_distribution);
-
-    // Urgency meters
-    const urgDist = dash.urgency_distribution || {};
-    const routine = urgDist['Routine'] || { count: 0, percentage: 0 };
-    const attention = urgDist['Needs Attention'] || { count: 0, percentage: 0 };
-    const urgent = urgDist['Urgent'] || { count: 0, percentage: 0 };
-
-    urgencyRoutineCount.textContent = `${routine.count} (${routine.percentage}%)`;
-    urgencyRoutineBar.style.width = `${routine.percentage}%`;
-
-    urgencyAttentionCount.textContent = `${attention.count} (${attention.percentage}%)`;
-    urgencyAttentionBar.style.width = `${attention.percentage}%`;
-
-    urgencyUrgentCount.textContent = `${urgent.count} (${urgent.percentage}%)`;
-    urgencyUrgentBar.style.width = `${urgent.percentage}%`;
 
     // Tone distribution
     renderToneDistribution(dash.tone_distribution);
@@ -679,6 +739,46 @@
     // Keyword cloud
     renderKeywordCloud(dash.top_keywords, dash.total_unique_keywords);
   }
+
+  // ==========================================================================
+  // Pictorial Representation: SVG Donut Chart Renderer
+  // ==========================================================================
+
+  function renderUrgencyDonutChart(urgDist, userCount) {
+    if (!donutSegmentRoutine || !donutSegmentAttention || !donutSegmentUrgent) return;
+
+    donutCenterNum.textContent = userCount;
+
+    const routine = (urgDist && urgDist['Routine']) ? urgDist['Routine'] : { count: 0, percentage: 0 };
+    const attention = (urgDist && urgDist['Needs Attention']) ? urgDist['Needs Attention'] : { count: 0, percentage: 0 };
+    const urgent = (urgDist && urgDist['Urgent']) ? urgDist['Urgent'] : { count: 0, percentage: 0 };
+
+    legendRoutineStat.textContent = `${routine.count} (${routine.percentage}%)`;
+    legendAttentionStat.textContent = `${attention.count} (${attention.percentage}%)`;
+    legendUrgentStat.textContent = `${urgent.count} (${urgent.percentage}%)`;
+
+    // Radius = 48 -> Circumference = 2 * PI * 48 ≈ 301.59
+    const circumference = 301.59;
+    const routineLen = (routine.percentage / 100) * circumference;
+    const attentionLen = (attention.percentage / 100) * circumference;
+    const urgentLen = (urgent.percentage / 100) * circumference;
+
+    // Routine segment starts at offset 0
+    donutSegmentRoutine.style.strokeDasharray = `${routineLen} ${circumference}`;
+    donutSegmentRoutine.style.strokeDashoffset = '0';
+
+    // Attention segment starts right after Routine
+    donutSegmentAttention.style.strokeDasharray = `${attentionLen} ${circumference}`;
+    donutSegmentAttention.style.strokeDashoffset = `${-routineLen}`;
+
+    // Urgent segment starts right after Attention
+    donutSegmentUrgent.style.strokeDasharray = `${urgentLen} ${circumference}`;
+    donutSegmentUrgent.style.strokeDashoffset = `${-(routineLen + attentionLen)}`;
+  }
+
+  // ==========================================================================
+  // Pictorial Representation: Bar Graph Renderer
+  // ==========================================================================
 
   function renderIntentDistribution(dist) {
     if (!dist || Object.keys(dist).length === 0) {
@@ -693,7 +793,7 @@
       item.innerHTML = `
         <div class="dist-bar-header">
           <span class="dist-bar-name">${formatIntentName(intent)}</span>
-          <span class="dist-bar-stat">${data.count} (${data.percentage}%)</span>
+          <span class="dist-bar-stat">${data.count} inquiry (${data.percentage}%)</span>
         </div>
         <div class="progress-track">
           <div class="progress-fill intent" style="width: ${data.percentage}%;"></div>
@@ -845,7 +945,7 @@
 
     printMetricsSummary.innerHTML = `
       <div class="print-metric-box">
-        <span class="print-metric-label">Total Exchanges</span>
+        <span class="print-metric-label">Total Messages</span>
         <span class="print-metric-val">${currentMessages.length}</span>
       </div>
       <div class="print-metric-box">
@@ -986,7 +1086,7 @@
 
     setTimeout(() => {
       toast.style.opacity = '0';
-      toast.style.transform = 'translateY(12px) scale(0.95)';
+      toast.style.transform = 'translateY(16px) scale(0.95)';
       toast.style.transition = 'all 220ms ease';
       setTimeout(() => toast.remove(), 250);
     }, 3800);
